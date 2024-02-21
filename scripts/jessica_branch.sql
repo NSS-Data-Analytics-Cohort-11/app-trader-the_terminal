@@ -1,3 +1,5 @@
+--Exploration
+
 SELECT *
 FROM play_store_apps 
 WHERE genres ILIKE '%Game%' 
@@ -47,8 +49,8 @@ ORDER BY review_count DESC
 
 SELECT *
 FROM play_store_apps
-WHERE category = 'FAMILY'
---WHERE name ILIKE '%candy%crush%'
+--WHERE category = 'FAMILY'
+WHERE name ILIKE '%plants%zombies%'
 
 SELECT category
 FROM play_store_apps
@@ -56,29 +58,51 @@ GROUP BY category
 ORDER BY COUNT(*)
 
 --Unioned query:
---next need to find only apps with count of 2 - but what about spelling inconsitencies?
---and round the ratings to nearest .5
---add new columns for income and expenses
+--what to do about apps with counts above 2 (some are up to 10)? (ROBLOX, Candy Crush Saga, etc) Will affect yearly income, num_reviews - corrected!
 
-WITH apps AS
-(SELECT name, content_rating, review_count::numeric, price
-FROM app_store_apps
-WHERE primary_genre = 'Games' 
-	AND rating >= 4.8
-	AND price BETWEEN 0 AND 1
-ORDER BY review_count DESC
+WITH apps AS 
+(
+	(SELECT name, rating, review_count::numeric, price
+	FROM app_store_apps
+	WHERE primary_genre = 'Games' 
+	)
+	UNION ALL
+	(
+	SELECT name, rating, review_count::numeric, REPLACE(price, '$', '')::numeric
+	FROM play_store_apps
+	WHERE category IN ('GAME', 'FAMILY'))
 )
-UNION ALL
-
-(SELECT name, content_rating, review_count::numeric, REPLACE(price, '$', '')::numeric
-FROM play_store_apps
-WHERE category IN ('GAME', 'FAMILY')
-	AND rating >= 4.8
-	AND REPLACE(price, '$', '')::numeric BETWEEN 0 AND 1
-ORDER BY review_count DESC
- )
-SELECT name,
-	AVG(rating) AS avg_rating,
+SELECT 
+	name, 
+	COUNT(name), --remove this later, it's just to check my work
+	ROUND(ROUND(AVG(rating)*2, 0) / 2, 1) AS avg_rating_rounded,
 	SUM(review_count) AS review_count,
-	MAX(price) AS price
+	MAX(price) AS price,
+	(CASE WHEN name IN (SELECT name FROM app_store_apps) THEN 5000 ELSE 0 END +
+		CASE WHEN name IN (SELECT name FROM play_store_apps) THEN 5000 ELSE 0 END) * 12 
+		AS yearly_income, 
+	CASE WHEN ROUND(AVG(rating)*2, 0) / 2 = 5.0 THEN 11 
+		WHEN ROUND(AVG(rating)*2, 0) / 2 = 4.5 THEN 10 
+		WHEN ROUND(AVG(rating)*2, 0) / 2 = 4.0 THEN 9 
+		END 
+		AS lifespan,
+	ROUND(
+		(((CASE WHEN name IN (SELECT name FROM app_store_apps) THEN 5000 ELSE 0 END +
+			CASE WHEN name IN (SELECT name FROM play_store_apps) THEN 5000 ELSE 0 END) * 12)
+		* 
+		(CASE WHEN ROUND(AVG(rating)*2, 0) / 2 = 5.0 THEN 11 
+			WHEN ROUND(AVG(rating)*2, 0) / 2 = 4.5 THEN 10 
+			WHEN ROUND(AVG(rating)*2, 0) / 2 = 4.0 THEN 9 END))
+		- 
+		((CASE WHEN ROUND(AVG(rating)*2, 0) / 2 = 5.0 THEN 11 
+			WHEN ROUND(AVG(rating)*2, 0) / 2 = 4.5 THEN 10 
+			WHEN ROUND(AVG(rating)*2, 0) / 2 = 4.0 THEN 9 END) 
+		* 1000) 
+		- 
+		(CASE WHEN MAX(price) <= 1 THEN 10000 ELSE MAX(price)*10000 END)
+		, 0)
+		AS net_profit -- (income * lifespan) - (lifespan * 1000) - purchase price
 FROM apps
+GROUP BY name
+HAVING ROUND(ROUND(AVG(rating)*2, 0) / 2, 1) >= 4.0
+ORDER BY net_profit DESC, review_count DESC
