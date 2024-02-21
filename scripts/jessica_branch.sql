@@ -57,8 +57,10 @@ FROM play_store_apps
 GROUP BY category
 ORDER BY COUNT(*)
 
---Unioned query:
---what to do about apps with counts above 2 (some are up to 10)? (ROBLOX, Candy Crush Saga, etc) Will affect yearly income, num_reviews - corrected!
+---Unioned query---
+	--check for other categories on Play store that might be games
+	--possibly filter by num_reviews over 1mil? Or include potentially up and coming games?
+	--format $ as money
 
 WITH apps AS 
 (
@@ -76,8 +78,11 @@ SELECT
 	name, 
 	COUNT(name), --remove this later, it's just to check my work
 	ROUND(ROUND(AVG(rating)*2, 0) / 2, 1) AS avg_rating_rounded,
-	SUM(review_count) AS review_count,
+	ROUND(SUM(review_count)/1000000, 2) AS review_count_millions, -- edit to report in millions
 	MAX(price) AS price,
+	CASE WHEN MAX(price) <= 1 THEN 10000 
+		ELSE MAX(price)*10000 END 
+		AS purchase_price,
 	(CASE WHEN name IN (SELECT name FROM app_store_apps) THEN 5000 ELSE 0 END +
 		CASE WHEN name IN (SELECT name FROM play_store_apps) THEN 5000 ELSE 0 END) * 12 
 		AS yearly_income, 
@@ -101,8 +106,10 @@ SELECT
 		- 
 		(CASE WHEN MAX(price) <= 1 THEN 10000 ELSE MAX(price)*10000 END)
 		, 0)
-		AS net_profit -- (income * lifespan) - (lifespan * 1000) - purchase price
+		AS net_profit -- (yearly_income * lifespan) - (lifespan * 1000) - purchase price
 FROM apps
 GROUP BY name
 HAVING ROUND(ROUND(AVG(rating)*2, 0) / 2, 1) >= 4.0
-ORDER BY net_profit DESC, review_count DESC
+	--AND SUM(review_count) >= 1000000 	--Possibly filter
+ORDER BY net_profit DESC, review_count_millions DESC
+--LIMIT 10;
