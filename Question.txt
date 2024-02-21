@@ -1,0 +1,15 @@
+Creating a report 3-5 paragraphs. Turn in at the end of the project.
+
+What are the top 10 apps that the App Trader company should purchase?
+
+Give reasons.. percentages.. logic on WHY these 10 apps.
+
+No dashboard needed.
+
+
+* From Robert:
+Pretend like you are presenting to a board of investors.. trying to make the most money, profit.
+
+Lots of outside research with this too. 
+
+Git branching was a headache. No stakes if you mess up :)

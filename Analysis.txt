@@ -1,0 +1,60 @@
+** apps earn $5000 a month per app store regardless of the app price.
+
+** need to find apps that are BOTH tables to make the most money... $10,000 a month -- and App Trader would prefer to work with apps in BOTH stores anyway.
+
+
+
+Play_Store_Apps:  
+
+- 33 distinct app types
+
+select distinct category
+from play_Store_apps
+
+- Social category had the most reviews
+
+select
+	category,
+	max(review_count)
+from play_store_apps
+group by category
+order by max desc;
+
+select
+	name,
+	max(rating), 
+	category
+from play_Store_apps
+where rating is not null
+group by name, rating, category
+order by rating desc;
+
+****************************
+
+select 
+	distinct name,
+	category,
+	max(rating) as max_rating,
+	price::MONEY,
+	content_rating,
+	CAST(review_count as integer)
+from app_store_apps
+where name is not null
+	and rating is not null
+group by name, price, content_rating, review_count
+
+UNION
+
+select 
+	distinct name,
+	category,
+	max(rating) as max_rating,
+	price::MONEY,
+	content_rating, 
+	CAST(review_count as integer)
+from play_Store_apps
+where name is not null
+	and rating is not null
+group by name, price, content_rating, review_count
+
+order by price, max_rating desc, review_count desc;
