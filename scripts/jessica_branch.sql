@@ -27,6 +27,9 @@ WHERE primary_genre = 'Education' AND rating = 5.0 AND price BETWEEN 0 AND 1
 SELECT DISTINCT currency
 FROM app_store_apps
 
+SELECT COUNT(*) FROM app_store_apps 7197
+SELECT COUNT(*) FROM play_store_apps 10840 
+
 --Apple query
 
 SELECT name, review_count::numeric, content_rating
@@ -60,7 +63,7 @@ ORDER BY COUNT(*)
 ---Unioned query---
 	--check for other categories on Play store that might be games
 	--possibly filter by num_reviews over 1mil? Or include potentially up and coming games?
-	--format $ as money
+	--format $ as money...
 
 WITH apps AS 
 (
@@ -110,6 +113,6 @@ SELECT
 FROM apps
 GROUP BY name
 HAVING ROUND(ROUND(AVG(rating)*2, 0) / 2, 1) >= 4.0
-	--AND SUM(review_count) >= 1000000 	--Possibly filter
+	AND SUM(review_count) >= 1000000 	--Possibly filter
 ORDER BY net_profit DESC, review_count_millions DESC
---LIMIT 10;
+LIMIT 10;
