@@ -2,6 +2,7 @@
 SELECT *
 FROM play_store_apps
 
+
 -- Apple Table
 SELECT *
 FROM app_store_apps
@@ -74,11 +75,46 @@ ORDER BY total_reviews DESC
 
 --UNION
 
-SELECT name, play_store_apps.category
+
+(SELECT DISTINCT name, COUNT(name), play_store_apps.category, rating::numeric, SUM(review_count) AS total_review_count, MAX(price::money) AS max_price,
+ CASE
+WHEN price::money < '$1.00' THEN '10000'
+WHEN price::money = '$2.00' THEN '20000'
+ELSE 'blank' END AS purchase_price
 FROM play_store_apps
-	
+	WHERE play_store_apps.category = 'GAME'
+	AND rating IS NOT NULL
+  	--AND name IN (SELECT name FROM app_store_apps) 
+GROUP BY play_store_apps.name, category, rating, price
+
+
 UNION
 
-SELECT name, app_store_apps.primary_genre AS category
+SELECT DISTINCT name, COUNT(name), app_store_apps.primary_genre AS category, rating, SUM(review_count::numeric) AS total_review_count, MAX(price::money) AS max_price,
+CASE
+WHEN price::money < '$1.00' THEN '10000'
+WHEN price::money = '$2.00' THEN '20000'
+ELSE 'blank' END AS purchase_price
 FROM app_store_apps
+	WHERE app_store_apps.primary_genre = 'Games'
+	AND rating IS NOT NULL
+ --AND name IN (SELECT name FROM play_store_apps) 
+GROUP BY name, category, rating, price)
 
+--GROUP BY name, category, rating, max_price	
+ORDER BY total_review_count DESC, rating DESC
+LIMIT 10;
+
+--
+WITH apps AS
+(
+	(SELECT name, rating, review_count::numeric, price
+	FROM app_store_apps
+	WHERE primary_genre = 'Games'
+	)
+	UNION ALL
+	(
+	SELECT name, rating, review_count::numeric, REPLACE(price, '$', '')::numeric
+	FROM play_store_apps
+	WHERE category IN ('GAME','FAMILY'))
+)
