@@ -2,7 +2,6 @@
 SELECT *
 FROM play_store_apps
 
-
 -- Apple Table
 SELECT *
 FROM app_store_apps
@@ -75,14 +74,13 @@ ORDER BY total_reviews DESC
 
 --UNION
 
-
-(SELECT DISTINCT name, COUNT(name), play_store_apps.category, rating::numeric, SUM(review_count) AS total_review_count, MAX(price::money) AS max_price,
+(SELECT name, COUNT(name), play_store_apps.category, rating::numeric, SUM(review_count) AS total_review_count, MAX(price::money) AS max_price,
  CASE
 WHEN price::money < '$1.00' THEN '10000'
 WHEN price::money = '$2.00' THEN '20000'
 ELSE 'blank' END AS purchase_price
 FROM play_store_apps
-	WHERE play_store_apps.category = 'GAME'
+	WHERE play_store_apps.category = 'GAME''FAMILY'
 	AND rating IS NOT NULL
   	--AND name IN (SELECT name FROM app_store_apps) 
 GROUP BY play_store_apps.name, category, rating, price
@@ -90,7 +88,7 @@ GROUP BY play_store_apps.name, category, rating, price
 
 UNION
 
-SELECT DISTINCT name, COUNT(name), app_store_apps.primary_genre AS category, rating, SUM(review_count::numeric) AS total_review_count, MAX(price::money) AS max_price,
+SELECT name, COUNT(name), app_store_apps.primary_genre AS category, rating, SUM(review_count::numeric) AS total_review_count, MAX(price::money) AS max_price,
 CASE
 WHEN price::money < '$1.00' THEN '10000'
 WHEN price::money = '$2.00' THEN '20000'
@@ -98,23 +96,77 @@ ELSE 'blank' END AS purchase_price
 FROM app_store_apps
 	WHERE app_store_apps.primary_genre = 'Games'
 	AND rating IS NOT NULL
- --AND name IN (SELECT name FROM play_store_apps) 
+ --AND name IN (SELECT name FROM play_store_apps) 	
 GROUP BY name, category, rating, price)
 
 --GROUP BY name, category, rating, max_price	
 ORDER BY total_review_count DESC, rating DESC
 LIMIT 10;
+ 
 
---
-WITH apps AS
+--FINAL
+--CTE with UNION
+WITH all_apps AS
 (
-	(SELECT name, rating, review_count::numeric, price
-	FROM app_store_apps
-	WHERE primary_genre = 'Games'
-	)
-	UNION ALL
-	(
-	SELECT name, rating, review_count::numeric, REPLACE(price, '$', '')::numeric
-	FROM play_store_apps
-	WHERE category IN ('GAME','FAMILY'))
+(SELECT name, rating, review_count::numeric, price
+FROM app_store_apps
+WHERE primary_genre = 'Games'
+AND rating IS NOT NULL
 )
+UNION ALL
+(
+SELECT name, rating, review_count::numeric, REPLACE(price, '$', '')::numeric
+FROM play_store_apps
+WHERE category IN ('GAME','FAMILY')
+AND rating IS NOT NULL)
+)
+
+SELECT
+	name,
+	ROUND(ROUND(AVG(rating)*2, 0) / 2, 1) AS avg_rating_rounded,
+	SUM(review_count) AS total_review_count,
+	MAX(price) AS in_store_price,
+	CASE WHEN MAX(price) <= 1 THEN 10000
+		ELSE MAX(price)*10000 END
+		AS purchase_cost,
+
+	(CASE WHEN name IN (SELECT name FROM app_store_apps)
+		THEN 5000 ELSE 0 END +
+		CASE WHEN name IN (SELECT name FROM play_store_apps)
+		THEN 5000 ELSE 0 END) *12
+		AS annual_income,	
+
+	CASE WHEN ROUND(AVG(rating)*2, 0)/2=5.0 THEN 11
+		WHEN ROUND(AVG(rating)*2, 0)/2=4.5 THEN 10
+		WHEN ROUND(AVG(rating)*2, 0)/2=4.0 THEN 9
+		END
+		AS est_lifespan_yrs,
+
+	ROUND(
+		(((CASE WHEN name IN (SELECT name FROM app_store_apps)
+			THEN 5000 ELSE 0 END +
+			CASE WHEN name IN (SELECT name FROM play_store_apps)
+			THEN 5000 ELSE 0 END)*12)
+		*
+		(CASE WHEN ROUND(AVG(rating)*2, 0)/2=5.0 THEN 11
+			WHEN ROUND(AVG(rating)*2, 0)/2=4.5 THEN 10
+			WHEN ROUND(AVG(rating)*2, 0)/2=4.0 THEN 9 END))
+		-
+		((CASE WHEN ROUND(AVG(rating)*2, 0)/2=5.0 THEN 11
+			WHEN ROUND(AVG(rating)*2, 0)/2=4.5 THEN 10
+			WHEN ROUND(AVG(rating)*2, 0)/2=4.0 THEN 9 END)
+		* 1000)
+		-
+		(CASE WHEN MAX(price) <=1 THEN 10000 ELSE MAX(price)*10000 END)
+		, 0) AS est_net_profit
+
+FROM all_apps
+GROUP BY name
+HAVING ROUND(ROUND(AVG(rating)*2, 0)/2, 1) >=4.0
+	AND SUM(review_count) >= 1000000 
+	AND (CASE WHEN name IN (SELECT name FROM app_store_apps)
+		THEN 5000 ELSE 0 END +
+		CASE WHEN name IN (SELECT name FROM play_store_apps)
+		THEN 5000 ELSE 0 END) *12= '120000'
+ORDER BY annual_income DESC, total_review_count DESC, avg_rating_rounded DESC
+LIMIT 20;
