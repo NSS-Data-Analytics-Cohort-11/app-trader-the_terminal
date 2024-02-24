@@ -141,7 +141,7 @@ WITH app_store AS
 		primary_genre,
 		rating
 	from app_store_apps
-	where primary_genre = 'Games')
+	where primary_genre = 'Games'),
 	--group by name, price, primary_genre, rating),
 	--order by review_count desc
 
@@ -166,10 +166,11 @@ SELECT
 	a.price::MONEY,
 	a.rating
 FROM app_store as a
-FULL OUTER JOIN play_store as p
+FULL OUTER JOIN play_store as p 
 ON a.name = p.name
 	WHERE category IN ('GAME', 'FAMILY')
-	and a.price::MONEY <= '$1'
+	and a.price::MONEY <= '$1.00'
 	and a.review_count >= 1000000
 	and a.rating >= '4.5'
+	--and a.review_count >= 1000000 
 group by a.name, a.price, a.review_count, a.rating
